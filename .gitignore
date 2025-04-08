@@ -1,0 +1,6 @@
+.env
+uploads/
+.DS_Store
+*.pem
+*backup*
+test*.html
