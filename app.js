@@ -13,10 +13,11 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const port = 3000;
 
-const API_KEY = 'a94f43b7721964ce4e393870e5b15044';
-const MODEL_ID = '310361';
-const businessId = "5fce6843-6d14-4efe-9a76-88d15d1b2557";
-const appId = "urn:aid:712031a5-40a2-43ba-857e-cab85169198a";
+// 🔐 Secure values from environment variables
+const API_KEY = process.env.API_KEY;
+const MODEL_ID = process.env.MODEL_ID;
+const businessId = process.env.BUSINESS_ID;
+const appId = process.env.APP_ID;
 const privateKey = fs.readFileSync(path.join(__dirname, "poynt-private-key.pem"));
 
 app.use(cors());
@@ -30,8 +31,8 @@ const upload = multer({ storage });
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'pawthorized@gmail.com',
-        pass: 'kcyyfixzooqzlnlg'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
 
@@ -159,7 +160,7 @@ async function createAndSendPass({ email, handlerName, phone, petName, breed, mi
     const passUrl = `https://www.pass2u.net/d/${passRes.data.passId}`;
 
     await transporter.sendMail({
-        from: '"Pawthorized" <pawthorized@gmail.com>',
+        from: '"Pawthorized" <' + process.env.EMAIL_USER + '>',
         to: email,
         subject: "Your Service Animal Wallet ID",
         html: `
@@ -172,7 +173,6 @@ async function createAndSendPass({ email, handlerName, phone, petName, breed, mi
     return passUrl;
 }
 
-// ✅ /charge route
 app.post("/charge", async (req, res) => {
     const { nonce, email, zip, additionalHandler } = req.body;
 
@@ -198,7 +198,6 @@ app.post("/charge", async (req, res) => {
     }
 });
 
-// ✅ /create-pass route
 app.post('/create-pass', upload.none(), async (req, res) => {
     try {
         const {
