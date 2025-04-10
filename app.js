@@ -266,6 +266,52 @@ app.post('/create-pass', upload.none(), async (req, res) => {
     }
 });
 
+app.get("/.well-known/apple-developer-merchantid-domain-association", async (req, res) => {
+    try {
+      const token = await getAccessToken();
+  
+      const result = await axios.get(
+        `https://services.poynt.net/businesses/${process.env.BUSINESS_ID}/apple-pay/domain-association-file`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "text/plain"
+          }
+        }
+      );
+  
+      res.setHeader("Content-Type", "text/plain");
+      res.send(result.data);
+    } catch (err) {
+      console.error("❌ Error fetching Apple Pay domain-association-file:", err.message);
+      res.status(500).send("Failed to fetch Apple Pay domain association file");
+    }
+  });
+  
+  app.post("/register-apple-pay", async (req, res) => {
+    try {
+      const token = await getAccessToken();
+      const response = await axios.post(
+        `https://services.poynt.net/businesses/${process.env.BUSINESS_ID}/apple-pay/registration`,
+        {
+          registerDomains: ["pawthorized.com"],
+          merchantName: "Pawthorized",
+          merchantUrl: "https://pawthorized.com"
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+      res.json(response.data);
+    } catch (err) {
+      console.error("❌ Apple Pay registration failed:", err.response?.data || err.message);
+      res.status(500).json({ error: "Apple Pay registration failed" });
+    }
+  });
+  
 app.listen(port, () => {
     console.log(`🚀 Server running at http://localhost:${port}`);
 });
