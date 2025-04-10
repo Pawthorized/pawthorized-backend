@@ -270,8 +270,7 @@ app.post('/create-pass', upload.none(), async (req, res) => {
 app.get("/.well-known/apple-developer-merchantid-domain-association", async (req, res) => {
     try {
       const token = await getAccessToken();
-  
-      const response = await axios.get(
+      const result = await axios.get(
         `https://services.poynt.net/businesses/${process.env.BUSINESS_ID}/apple-pay/domain-association-file`,
         {
           headers: {
@@ -280,24 +279,14 @@ app.get("/.well-known/apple-developer-merchantid-domain-association", async (req
           }
         }
       );
-  
-      // ✅ Extract base64 string from possible JSON structure
-      const fileContent =
-        typeof response.data === "string"
-          ? response.data
-          : response.data.file || response.data.content;
-  
-      if (!fileContent || !fileContent.startsWith("MIIB")) {
-        return res.status(500).send("❌ Invalid domain file format.");
-      }
-  
       res.setHeader("Content-Type", "text/plain");
-      res.send(fileContent);
+      res.send(result.data);
     } catch (err) {
-      console.error("❌ Error fetching Apple Pay domain-association-file:", err.response?.data || err.message);
-      res.status(500).send("❌ Could not retrieve Apple Pay domain file.");
+      console.error("❌ Error fetching Apple Pay domain-association-file:", err.message);
+      res.status(500).send("Failed to fetch Apple Pay domain association file");
     }
   });
+  
   
   app.all("/register-apple-pay", async (req, res) => {
     try {
