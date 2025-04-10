@@ -173,30 +173,40 @@ async function createAndSendPass({ email, handlerName, phone, petName, breed, mi
     return passUrl;
 }
 
+// ✅ Updated /charge route with smarter approval detection
 app.post("/charge", async (req, res) => {
     const { nonce, email, zip, additionalHandler } = req.body;
-
+  
     try {
-        const chargeResult = await chargeNonce(nonce, email, zip, additionalHandler);
-
-        const isApproved =
-            chargeResult.status === "APPROVED" &&
-            chargeResult.processorResponse?.status === "Success";
-
-        if (!isApproved) {
-            return res.status(402).json({
-                success: false,
-                message: "❌ Payment declined: " + (chargeResult.processorResponse?.statusMessage || "Unknown"),
-                raw: chargeResult
-            });
-        }
-
-        res.json({ success: true, message: "✅ Payment successful!" });
+      const chargeResult = await chargeNonce(nonce, email, zip, additionalHandler);
+  
+      // Normalize values from processor
+      const APPROVED_MESSAGES = ["success", "approval", "approved", "complete", "completed", "ok"];
+      const APPROVED_CODES = ["00", "85", "08"];
+  
+      const rawStatus = (chargeResult.processorResponse?.status || "").toLowerCase().replace(/[^a-z]/g, "").trim();
+      const rawCode = (chargeResult.processorResponse?.responseCode || "").trim();
+  
+      const isApproved =
+        chargeResult.status === "APPROVED" &&
+        (APPROVED_MESSAGES.includes(rawStatus) || APPROVED_CODES.includes(rawCode));
+  
+      if (!isApproved) {
+        console.warn("⚠️ Unrecognized processor response:", chargeResult.processorResponse);
+        return res.status(402).json({
+          success: false,
+          message: "❌ Payment declined: " + (chargeResult.processorResponse?.statusMessage || "Unknown"),
+          raw: chargeResult
+        });
+      }
+  
+      res.json({ success: true, message: "✅ Payment successful!" });
     } catch (err) {
-        console.error("❌ Charge error:", err.response?.data || err.message);
-        res.status(500).json({ success: false, message: "❌ Payment failed.", error: err.message });
+      console.error("❌ Charge error:", err.response?.data || err.message);
+      res.status(500).json({ success: false, message: "❌ Payment failed.", error: err.message });
     }
-});
+  });
+  
 
 app.post('/create-pass', upload.none(), async (req, res) => {
     try {
