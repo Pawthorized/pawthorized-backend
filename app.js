@@ -172,7 +172,14 @@ async function createAndSendPass({ email, handlerName, phone, petName, breed, mi
 
     return passUrl;
 }
-
+// New endpoint to get the amount dynamically
+app.post("/get-amount", (req, res) => {
+    const { additionalHandler } = req.body;
+    const totalAmount = additionalHandler === 'on' ? 1999 + 999 : 1999;
+    const amountInDollars = (totalAmount / 100).toFixed(2);
+    res.json({ amount: amountInDollars }); // e.g., "19.99" or "29.98"
+  });
+  
 // ✅ Updated /charge route with smarter approval detection
 app.post("/charge", async (req, res) => {
     const { nonce, email, zip, additionalHandler } = req.body;
