@@ -288,7 +288,7 @@ app.get("/.well-known/apple-developer-merchantid-domain-association", async (req
     }
   });
   
-  app.post("/register-apple-pay", async (req, res) => {
+  app.all("/register-apple-pay", async (req, res) => {
     try {
       const token = await getAccessToken();
       const response = await axios.post(
