@@ -4,3 +4,6 @@ uploads/
 *.pem
 *backup*
 test*.html
+*.html
+pawthorized-backend.git.bfg-report/
+pawthorized-backend.git/
