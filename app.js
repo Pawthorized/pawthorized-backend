@@ -189,8 +189,26 @@ app.post("/charge", async (req, res) => {
       const chargeResult = await chargeNonce(nonce, email, zip, additionalHandler);
   
       // Normalize values from processor
-      const APPROVED_MESSAGES = ["success", "approval", "approved", "complete", "completed", "ok"];
-      const APPROVED_CODES = ["00", "85", "08"];
+const APPROVED_MESSAGES = [
+    "success",
+    "successfull",
+    "approved",
+    "approval",
+    "complete",
+    "completed",
+    "ok",
+    "authorized",
+    "authorization",
+    "transaction approved",
+    "transaction successful",
+    "successfully processed",
+    "purchase approved",
+    "accepted"
+  ];
+  
+  const APPROVED_CODES = [
+    "00", "08", "11", "85", "86", "87", "A1", "Y1", "Z3"
+  ];
   
       const rawStatus = (chargeResult.processorResponse?.status || "").toLowerCase().replace(/[^a-z]/g, "").trim();
       const rawCode = (chargeResult.processorResponse?.responseCode || "").trim();
