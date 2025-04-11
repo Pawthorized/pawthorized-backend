@@ -181,47 +181,88 @@ app.post("/get-amount", (req, res) => {
     res.json({ amount: amountInDollars }); // e.g., "19.99" or "29.98"
   });
   
-// ✅ Updated /charge route with smarter approval detection
+// ✅ Updated /charge route with smarter approval detection for Poynt Collect
 app.post("/charge", async (req, res) => {
     const { nonce, email, zip, additionalHandler } = req.body;
   
     try {
       const chargeResult = await chargeNonce(nonce, email, zip, additionalHandler);
   
-      // Normalize values from processor
-const APPROVED_MESSAGES = [
-    "success",
-    "successfull",
-    "approved",
-    "approval",
-    "complete",
-    "completed",
-    "ok",
-    "authorized",
-    "authorization",
-    "transaction approved",
-    "transaction successful",
-    "successfully processed",
-    "purchase approved",
-    "accepted"
-  ];
+      // Normalize values from processor with fuzzy matching
+      const stringSimilarity = require('string-similarity'); // Install: `npm install string-similarity`
+
+      const APPROVED_MESSAGES = [
+        "success", "successful", "successfully", "succeeded",
+        "approved", "approval", "approve",
+        "complete", "completed",
+        "ok", "okay",
+        "authorized", "authorised", "authorization", "authorisation",
+        "transaction approved", "transaction successful", "successfully processed",
+        "purchase approved", "accepted", "confirmed", "done", "valid", "validated",
+        "charged", "processed", "settled"
+      ];
   
-  const APPROVED_CODES = [
-    "00", "08", "11", "85", "86", "87", "A1", "Y1", "Z3"
-  ];
+      const APPROVED_CODES = [
+        "00", "08", "10", "11", "85", "86", "87", // Standard codes
+        "A1", "Y1", "Z3", // Alpha codes
+        "000", "100", "200", "300", // Extended numeric codes
+        "05" // Sometimes used for approvals with additional checks
+      ];
   
-      const rawStatus = (chargeResult.processorResponse?.status || "").toLowerCase().replace(/[^a-z]/g, "").trim();
-      const rawCode = (chargeResult.processorResponse?.responseCode || "").trim();
+      // Normalize text function
+      const normalizeText = (text) => {
+        if (!text) return '';
+        return text
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '') // Keep spaces and numbers
+          .replace(/\s+/g, ' ') // Collapse spaces
+          .trim();
+      };
   
+      // Extract Poynt-specific fields
+      const rawStatus = normalizeText(chargeResult.status || chargeResult.processorResponse?.status || '');
+      const rawCode = normalizeText(chargeResult.processorResponse?.responseCode || chargeResult.processorResponse?.code || '');
+      const statusMessage = normalizeText(chargeResult.processorResponse?.statusMessage || chargeResult.processorResponse?.message || '');
+  
+      // Fuzzy matching for approval messages
+      const isMessageApproved = () => {
+        // Exact match
+        if (APPROVED_MESSAGES.includes(rawStatus) || APPROVED_MESSAGES.includes(statusMessage)) {
+          return true;
+        }
+        // Fuzzy match
+        for (const approvedMsg of APPROVED_MESSAGES) {
+          const similarity = stringSimilarity.compareTwoStrings(rawStatus, approvedMsg);
+          const msgSimilarity = stringSimilarity.compareTwoStrings(statusMessage, approvedMsg);
+          if (similarity > 0.85 || msgSimilarity > 0.85) {
+            console.log(`Fuzzy matched '${rawStatus}' or '${statusMessage}' to '${approvedMsg}'`);
+            return true;
+          }
+        }
+        return false;
+      };
+  
+      // Code check
+      const isCodeApproved = () => {
+        return APPROVED_CODES.includes(rawCode) || /^[0-3]{1,3}$/.test(rawCode); // Allow 0xx-3xx codes
+      };
+  
+      // Approval logic
       const isApproved =
-        chargeResult.status === "APPROVED" &&
-        (APPROVED_MESSAGES.includes(rawStatus) || APPROVED_CODES.includes(rawCode));
+        ["APPROVED", "SUCCEEDED", "COMPLETED"].includes(chargeResult.status?.toUpperCase()) ||
+        isMessageApproved() ||
+        isCodeApproved();
   
       if (!isApproved) {
-        console.warn("⚠️ Unrecognized processor response:", chargeResult.processorResponse);
+        console.warn("⚠️ Unrecognized processor response:", {
+          status: rawStatus,
+          code: rawCode,
+          message: statusMessage,
+          raw: chargeResult
+        });
         return res.status(402).json({
           success: false,
-          message: "❌ Payment declined: " + (chargeResult.processorResponse?.statusMessage || "Unknown"),
+          message: "❌ Payment declined: " + (statusMessage || "Unknown"),
           raw: chargeResult
         });
       }
@@ -231,8 +272,7 @@ const APPROVED_MESSAGES = [
       console.error("❌ Charge error:", err.response?.data || err.message);
       res.status(500).json({ success: false, message: "❌ Payment failed.", error: err.message });
     }
-  });
-  
+});
 
 app.post('/create-pass', upload.none(), async (req, res) => {
     try {
