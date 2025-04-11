@@ -1,5 +1,6 @@
 .env
-uploads/
+uploads/*
+!uploads/.gitkeep
 .DS_Store
 *.pem
 *backup*
