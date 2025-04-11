@@ -84,7 +84,7 @@ async function chargeNonce(nonce, email, zip, additionalHandler) {
       billingContact: { address: { postalCode: zip } }
     },
     emailReceipt: true,
-    receiptEmailAddress: email
+    receiptEmailAddress: String(email)
   };
 
   const res = await axios.post(
