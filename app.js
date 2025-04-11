@@ -270,7 +270,13 @@ app.post("/charge", upload.none(), async (req, res) => {
     res.status(500).json({ success: false, message: "❌ Payment or pass generation failed." });
   }
 });
-
+// ✅ Endpoint for dynamic price based on handler selection
+app.post('/get-amount', (req, res) => {
+    const { additionalHandler } = req.body;
+    const totalAmount = additionalHandler === 'on' ? 1999 + 999 : 1999;
+    const amountInDollars = (totalAmount / 100).toFixed(2);
+    res.json({ amount: amountInDollars });
+  });
 app.listen(port, () => {
   console.log(`🚀 Server running at http://localhost:${port}`);
 });
