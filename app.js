@@ -269,7 +269,10 @@ app.post("/charge", upload.none(), async (req, res) => {
       });
     }
 
-    res.json({ success: true, redirectUrl: "/success.html" });
+    res.json({
+        success: true,
+        redirectUrl: `/success.html?passUrl=${encodeURIComponent(passUrl)}`
+      });
 
   } catch (err) {
     console.error("❌ Charge or pass creation failed:", err.response?.data || err.message);
